@@ -1,0 +1,15 @@
+/* HireFlow AI — Global Styles (Step 4) */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+}

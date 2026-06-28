@@ -127,6 +127,9 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
 
+
+instructions.md
+
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
@@ -216,3 +219,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js / React frontend
+node_modules/
+frontend/dist/
+frontend/.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Google Service Account credentials (never commit)
+credentials/*.json
+!credentials/.gitkeep
+
+# Backend local env
+backend/.env
+
+# OS files
+.DS_Store
+Thumbs.db
