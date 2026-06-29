@@ -1,16 +1,14 @@
 /**
- * HireFlow AI — Main Dashboard Page.
- * Combines all panels: job intake, uploads, pipeline, review, audit log.
+ * FILE 12 of 14 — Main Dashboard Page.
+ * 2-column layout: sidebar + main Kanban/audit with drawer and toasts.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import AuditLogViewer from "../components/AuditLogViewer";
 import CandidateDetail from "../components/CandidateDetail";
-import FeedbackForm from "../components/FeedbackForm";
 import JobIntakePanel from "../components/JobIntakePanel";
 import PipelineView from "../components/PipelineView";
 import ResumeUploadZone from "../components/ResumeUploadZone";
-import ReviewPanel from "../components/ReviewPanel";
 import { useWebSocket } from "../hooks/useWebSocket";
 import {
   createJob,
@@ -24,28 +22,68 @@ import {
 } from "../services/api";
 
 /**
- * Dashboard — root page state and layout for the recruiter UI.
+ * ToastContainer — renders stacked toast notifications top-right.
+ * Input: toasts array, onDismiss function
+ * Output: JSX toast stack
+ */
+function ToastContainer({ toasts, onDismiss }) {
+  return (
+    <div className="toast-container">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast toast-${t.type}`} onClick={() => onDismiss(t.id)}>
+          <span className="toast-icon">
+            {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "ℹ"}
+          </span>
+          <span>{t.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
+/**
+ * Dashboard — root page with sidebar, Kanban, audit panel, drawer, toasts.
  * Input: none
- * Output: full dashboard JSX
+ * Output: full redesigned dashboard JSX
  */
 export default function Dashboard() {
   const [activeJob, setActiveJob] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [pipelineStatus, setPipelineStatus] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [pipelineRunning, setPipelineRunning] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState("pipeline");
+  const [toasts, setToasts] = useState([]);
 
   /**
-   * Refresh candidate list and audit logs for the active job.
+   * Add a toast notification that auto-dismisses after 4 seconds.
+   * Input: message string, type success|error|info
+   * Output: none
+   */
+  const addToast = useCallback((message, type = "info") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
 
-   * Input: none (uses activeJob state)
-   * Output: none (updates candidates, auditLogs state)
+  /**
+   * Dismiss one toast by id.
+   * Input: toast id
+   * Output: none
+   */
+  function dismissToast(id) {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  /**
+   * Refresh candidates and audit logs for active job.
+   * Input: none
+   * Output: updates candidates and auditLogs state
    */
   const refreshJobData = useCallback(async () => {
     if (!activeJob?.id) return;
@@ -56,17 +94,16 @@ export default function Dashboard() {
       const auditRes = await getAuditLogs(activeJob.id);
       setAuditLogs(auditRes.logs || []);
     } catch (err) {
-      setError(err.message);
+      addToast(err.message, "error");
     } finally {
       setAuditLoading(false);
     }
-  }, [activeJob?.id]);
+  }, [activeJob?.id, addToast]);
 
   /**
    * Refresh pipeline status from API.
-
    * Input: none
-   * Output: none (updates pipelineStatus state)
+   * Output: updates pipelineStatus and pipelineRunning
    */
   const refreshPipelineStatus = useCallback(async () => {
     if (!activeJob?.id) return;
@@ -88,10 +125,9 @@ export default function Dashboard() {
   }, [activeJob?.id]);
 
   /**
-   * Handle WebSocket pipeline events — refresh data on updates.
-
+   * Handle WebSocket pipeline events.
    * Input: event object from WebSocket
-   * Output: none
+   * Output: refreshes data on matching job events
    */
   const handleWsEvent = useCallback(
     (event) => {
@@ -100,10 +136,10 @@ export default function Dashboard() {
       refreshPipelineStatus();
       if (event.event_type === "pipeline_complete") {
         setPipelineRunning(false);
-        setSuccess("Pipeline completed! Review results below.");
+        addToast("Pipeline completed! Review results in the board.", "success");
       }
     },
-    [activeJob?.id, refreshJobData, refreshPipelineStatus]
+    [activeJob?.id, refreshJobData, refreshPipelineStatus, addToast]
   );
 
   const { connected } = useWebSocket(handleWsEvent, Boolean(activeJob?.id));
@@ -113,7 +149,6 @@ export default function Dashboard() {
     refreshPipelineStatus();
   }, [activeJob?.id, refreshJobData, refreshPipelineStatus]);
 
-  /** Poll every 3s while pipeline runs (fallback if WebSocket drops). */
   useEffect(() => {
     if (!pipelineRunning || !activeJob?.id) return;
     const interval = setInterval(() => {
@@ -124,10 +159,9 @@ export default function Dashboard() {
   }, [pipelineRunning, activeJob?.id, refreshJobData, refreshPipelineStatus]);
 
   /**
-   * When user selects a candidate card, load full detail.
-
-   * Input: candidate object from pipeline
-   * Output: none (updates selectedCandidate)
+   * Open candidate detail drawer with full API data.
+   * Input: candidate object from Kanban card
+   * Output: sets selectedCandidate and opens drawer
    */
   async function handleSelectCandidate(candidate) {
     try {
@@ -136,60 +170,56 @@ export default function Dashboard() {
     } catch {
       setSelectedCandidate(candidate);
     }
+    setDrawerOpen(true);
   }
 
   /**
-   * Start autonomous pipeline — one-click agent run.
-
-   * Input: click Run Pipeline button
-   * Output: none (starts background pipeline on backend)
+   * Start autonomous pipeline.
+   * Input: Run Pipeline button click
+   * Output: triggers backend pipeline
    */
   async function handleRunPipeline() {
     if (!activeJob?.id) return;
-    setError(null);
-    setSuccess(null);
     setPipelineRunning(true);
     try {
       const result = await runPipeline(activeJob.id);
-      setSuccess(result.message || "Pipeline started!");
+      addToast(result.message || "Pipeline started!", "success");
       await refreshPipelineStatus();
     } catch (err) {
-      setError(err.message);
+      addToast(err.message, "error");
       setPipelineRunning(false);
     }
   }
 
   /**
-   * Handle job created from JobIntakePanel.
-
+   * Handle job created from sidebar form.
    * Input: job object from API
-   * Output: none (sets activeJob)
+   * Output: sets active job and shows toast
    */
   function handleJobCreated(job) {
     setActiveJob(job);
     setCandidates([]);
     setSelectedCandidate(null);
+    setDrawerOpen(false);
     setAuditLogs([]);
     setPipelineStatus(null);
-    setSuccess(`Job "${job.title}" created. Upload resumes next.`);
+    addToast(`Job "${job.title}" created — upload resumes next.`, "success");
   }
 
   /**
    * Handle resume upload complete.
-
-   * Input: upload response from API
-   * Output: none (refreshes candidates)
+   * Input: upload API response
+   * Output: refreshes candidates list
    */
   async function handleUploadComplete(result) {
-    setSuccess(result.message);
+    addToast(result.message, "success");
     await refreshJobData();
   }
 
   /**
-   * Handle human review approve/reject.
-
+   * Handle human review approve/reject from drawer.
    * Input: candidateId, action, overrideScore, notes
-   * Output: API result
+   * Output: API result; throws on error for ReviewPanel
    */
   async function handleReview(candidateId, action, overrideScore, notes) {
     const result = await reviewCandidate(
@@ -201,154 +231,124 @@ export default function Dashboard() {
     await refreshJobData();
     const updated = await getCandidate(candidateId);
     setSelectedCandidate(updated);
+    addToast(`Candidate ${action}d successfully.`, "success");
     return result;
   }
 
   /**
-   * Local feedback handler (UI acknowledgment; weights updated via review API).
-
+   * Local feedback log (UI acknowledgment).
    * Input: candidateId, rating, notes
    * Output: none
    */
   function handleFeedback(candidateId, rating, notes) {
     console.info("[Feedback]", candidateId, rating, notes);
+    addToast("Feedback recorded — thank you!", "info");
   }
 
+  const progressPct = pipelineStatus?.progress_pct ?? 0;
+
   return (
-  <>
-      {error && (
-        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-          {error}
-          <button
-            type="button"
-            className="btn btn-sm btn-outline"
-            style={{ marginLeft: "0.5rem" }}
-            onClick={() => setError(null)}
-          >
-            Dismiss
-          </button>
+    <>
+      {pipelineRunning && (
+        <div className="top-progress">
+          <div className="top-progress-bar" style={{ width: `${progressPct}%` }} />
         </div>
       )}
 
-      {success && (
-        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          {success}
-        </div>
-      )}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="dashboard-grid">
-        {/* Left column — intake and controls */}
-        <div>
-          <JobIntakePanel
-            onJobCreated={handleJobCreated}
-            onCreateJob={createJob}
-            disabled={pipelineRunning}
-          />
+      <div className="dashboard-layout">
+        {/* ── Sidebar: job + upload + run ── */}
+        <aside className="sidebar">
+          <div className="sidebar-inner">
+            <JobIntakePanel
+              onJobCreated={handleJobCreated}
+              onCreateJob={createJob}
+              disabled={pipelineRunning}
+            />
 
-          <div style={{ marginTop: "1rem" }}>
             <ResumeUploadZone
               jobId={activeJob?.id}
               onUpload={uploadResumes}
               onUploadComplete={handleUploadComplete}
               disabled={pipelineRunning}
             />
-          </div>
 
-          {activeJob && (
-            <div className="card" style={{ marginTop: "1rem" }}>
-              <h2 className="card-title">3. Run Agent</h2>
-              <p style={{ fontSize: "0.8rem", color: "#64748b", margin: "0 0 0.75rem" }}>
-                Active job: <strong>{activeJob.title}</strong>
-              </p>
-              <button
-                type="button"
-                className="btn btn-success btn-block"
-                disabled={pipelineRunning || candidates.length === 0}
-                onClick={handleRunPipeline}
-              >
-                {pipelineRunning
-                  ? "⏳ Agent Running..."
-                  : "▶ Run Autonomous Pipeline"}
-              </button>
-              <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem" }}>
-                WebSocket: {connected ? "🟢 Live" : "🔴 Disconnected"}
-              </p>
-            </div>
-          )}
-
-          {pipelineStatus && pipelineStatus.status !== "idle" && (
-            <div className="card" style={{ marginTop: "1rem" }}>
-              <h2 className="card-title">Pipeline Progress</h2>
-              <div className="progress-bar-wrap">
-                <div className="progress-label">
-                  {pipelineStatus.current_step || pipelineStatus.status} —{" "}
-                  {pipelineStatus.progress_pct}%
-                  ({pipelineStatus.processed_count}/{pipelineStatus.total_count})
+            {activeJob && (
+              <div className="card">
+                <h2 className="card-title">
+                  <span className="step-badge">3</span>
+                  Run Agent
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "var(--color-text-muted)", margin: "0 0 0.75rem" }}>
+                  Active job: <strong>{activeJob.title}</strong>
+                  <br />
+                  {candidates.length} candidate(s) ready
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-success btn-block"
+                  disabled={pipelineRunning || candidates.length === 0}
+                  onClick={handleRunPipeline}
+                >
+                  {pipelineRunning && <span className="btn-spinner" />}
+                  {pipelineRunning ? "Agent Running..." : "▶ Run Autonomous Pipeline"}
+                </button>
+                <div className="ws-status">
+                  <span className={`ws-dot ${connected ? "live" : ""}`} />
+                  WebSocket {connected ? "Live" : "Disconnected"}
                 </div>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${pipelineStatus.progress_pct}%` }}
-                  />
-                </div>
+                {pipelineStatus?.plan && pipelineRunning && (
+                  <div className="plan-box" style={{ marginTop: "0.75rem", fontSize: "0.78rem", whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto", padding: "0.65rem", background: "var(--color-column-bg)", borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                    {pipelineStatus.plan.slice(0, 300)}
+                  </div>
+                )}
               </div>
-              {pipelineStatus.plan && (
-                <div className="plan-box" style={{ marginTop: "0.75rem" }}>
-                  {pipelineStatus.plan}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </aside>
 
-        {/* Center — pipeline kanban */}
-        <div>
-          <div className="tabs">
+        {/* ── Main: Kanban + audit below ── */}
+        <main className="main-content">
+          <div className="main-tabs">
             <button
               type="button"
               className={`tab ${activeTab === "pipeline" ? "active" : ""}`}
               onClick={() => setActiveTab("pipeline")}
             >
-              Pipeline
+              📊 Pipeline
             </button>
             <button
               type="button"
               className={`tab ${activeTab === "audit" ? "active" : ""}`}
               onClick={() => setActiveTab("audit")}
             >
-              Audit Log
+              📋 Audit Log
             </button>
           </div>
 
-          {activeTab === "pipeline" ? (
-            <PipelineView
-              candidates={candidates}
-              selectedId={selectedCandidate?.id}
-              onSelectCandidate={handleSelectCandidate}
-            />
-          ) : (
+          <PipelineView
+            candidates={candidates}
+            selectedId={selectedCandidate?.id}
+            onSelectCandidate={handleSelectCandidate}
+            pipelineRunning={pipelineRunning}
+          />
+
+          {activeTab === "audit" && (
             <AuditLogViewer logs={auditLogs} loading={auditLoading} />
           )}
-        </div>
-
-        {/* Right column — detail, review, feedback */}
-        <div>
-          <ReviewPanel
-            candidate={selectedCandidate}
-            onReview={handleReview}
-            onReviewComplete={() => setSuccess("Review action completed.")}
-          />
-          <div style={{ marginTop: "1rem" }}>
-            <CandidateDetail candidate={selectedCandidate} />
-          </div>
-          <div style={{ marginTop: "1rem" }}>
-            <FeedbackForm
-              candidate={selectedCandidate}
-              onSubmitFeedback={handleFeedback}
-            />
-          </div>
-        </div>
+        </main>
       </div>
+
+      <CandidateDetail
+        open={drawerOpen}
+        candidate={selectedCandidate}
+        onClose={() => setDrawerOpen(false)}
+        onReview={handleReview}
+        onReviewComplete={() => addToast("Review action completed.", "success")}
+        onReviewError={(msg) => addToast(msg, "error")}
+        onSubmitFeedback={handleFeedback}
+      />
     </>
   );
 }

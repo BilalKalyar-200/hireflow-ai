@@ -1,18 +1,14 @@
 /**
- * HireFlow AI — Job Intake Panel.
+ * FILE 5 of 14 — Job Intake Panel.
  * Form for pasting a job description and optional title.
  */
 
 import { useState } from "react";
 
 /**
- * JobIntakePanel — lets recruiter paste or type a job description.
-
- * Input props:
- *   onJobCreated(job): callback when job is successfully created
- *   onCreateJob(jdText, title): async function that creates job via API
- *   disabled: whether form is disabled during loading
- * Output: JSX form UI
+ * JobIntakePanel — lets recruiter paste JD and create a job posting.
+ * Input: onJobCreated, onCreateJob, disabled props
+ * Output: JSX form with character count and success checkmark
  */
 export default function JobIntakePanel({
   onJobCreated,
@@ -23,16 +19,17 @@ export default function JobIntakePanel({
   const [jdText, setJdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [created, setCreated] = useState(false);
 
   /**
-   * Handle form submit — validate and create job.
-
+   * Submit job creation form.
    * Input: form submit event
-   * Output: none (calls onCreateJob and onJobCreated)
+   * Output: calls onCreateJob and shows success checkmark
    */
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    setCreated(false);
 
     if (jdText.trim().length < 10) {
       setError("Job description must be at least 10 characters.");
@@ -43,6 +40,7 @@ export default function JobIntakePanel({
     try {
       const job = await onCreateJob(jdText.trim(), title.trim() || null);
       onJobCreated(job);
+      setCreated(true);
       setJdText("");
       setTitle("");
     } catch (err) {
@@ -54,17 +52,25 @@ export default function JobIntakePanel({
 
   return (
     <div className="card">
-      <h2 className="card-title">1. Job Description</h2>
+      <h2 className="card-title">
+        <span className="step-badge">1</span>
+        Job Description
+      </h2>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="toast toast-error" style={{ marginBottom: "0.75rem", position: "static" }}>
+          <span className="toast-icon">✕</span>
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="job-title">Job title (optional)</label>
+          <label htmlFor="job-title">Job title</label>
           <input
             id="job-title"
             type="text"
-            placeholder="e.g. Senior Python Developer"
+            placeholder="e.g. Senior Python Developer — Remote, Full-time"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={disabled || loading}
@@ -72,15 +78,19 @@ export default function JobIntakePanel({
         </div>
 
         <div className="form-group">
-          <label htmlFor="jd-text">Paste job description</label>
+          <label htmlFor="jd-text">Paste full job description</label>
           <textarea
             id="jd-text"
-            placeholder="Paste the full job description here — requirements, skills, experience..."
+            placeholder="Include required skills, years of experience, responsibilities, and education requirements. The agent uses this to score every resume automatically."
             value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
+            onChange={(e) => {
+              setJdText(e.target.value);
+              setCreated(false);
+            }}
             disabled={disabled || loading}
             required
           />
+          <div className="char-count">{jdText.length} characters</div>
         </div>
 
         <button
@@ -88,8 +98,15 @@ export default function JobIntakePanel({
           className="btn btn-primary btn-block"
           disabled={disabled || loading}
         >
+          {loading && <span className="btn-spinner" />}
           {loading ? "Creating..." : "Create Job Posting"}
         </button>
+
+        {created && (
+          <div className="job-success">
+            <span>✓</span> Job created successfully — upload resumes next
+          </div>
+        )}
       </form>
     </div>
   );

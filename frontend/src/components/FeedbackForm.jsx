@@ -1,77 +1,58 @@
 /**
- * HireFlow AI — Feedback Form.
- * Recruiter feedback on scores to improve future scoring weights.
+ * FILE 10 of 14 — Recruiter Feedback Form.
+ * Thumbs up/down on agent scoring accuracy.
  */
 
 import { useState } from "react";
 
 /**
- * FeedbackForm — thumbs feedback tied to selected candidate.
-
- * Input props:
- *   candidate: selected candidate object or null
- *   onSubmitFeedback(candidateId, rating, notes): callback (optional local feedback)
- * Output: JSX feedback form or empty state
+ * FeedbackForm — recruiter feedback on score accuracy.
+ * Input: candidate, onSubmitFeedback
+ * Output: JSX feedback buttons inside drawer
  */
 export default function FeedbackForm({ candidate, onSubmitFeedback }) {
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  if (!candidate) {
-    return (
-      <div className="card">
-        <h2 className="card-title">Recruiter Feedback</h2>
-        <div className="empty-state" style={{ padding: "1rem" }}>
-          Select a candidate to leave score feedback.
-        </div>
-      </div>
-    );
-  }
+  if (!candidate) return null;
 
   /**
-   * Record positive feedback (score was accurate).
-
-   * Input: click on thumbs up
-   * Output: none (calls onSubmitFeedback)
+   * Submit positive feedback.
+   * Input: click thumbs up
+   * Output: calls onSubmitFeedback callback
    */
   function handlePositive() {
-    if (onSubmitFeedback) {
-      onSubmitFeedback(candidate.id, "positive", notes);
-    }
+    if (onSubmitFeedback) onSubmitFeedback(candidate.id, "positive", notes);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   }
 
   /**
-   * Record negative feedback (score was wrong).
-
-   * Input: click on thumbs down
-   * Output: none (calls onSubmitFeedback)
+   * Submit negative feedback.
+   * Input: click thumbs down
+   * Output: calls onSubmitFeedback callback
    */
   function handleNegative() {
-    if (onSubmitFeedback) {
-      onSubmitFeedback(candidate.id, "negative", notes);
-    }
+    if (onSubmitFeedback) onSubmitFeedback(candidate.id, "negative", notes);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   }
 
   return (
-    <div className="card">
-      <h2 className="card-title">Recruiter Feedback</h2>
-      <p style={{ fontSize: "0.8rem", color: "#64748b", margin: "0 0 0.75rem" }}>
-        Was the agent&apos;s score for <strong>{candidate.name}</strong> accurate?
-        Feedback adjusts future scoring weights.
+    <div style={{ marginTop: "1.5rem", paddingTop: "1rem", borderTop: "1px solid var(--color-border)" }}>
+      <div className="section-title">Recruiter Feedback</div>
+      <p style={{ fontSize: "0.82rem", color: "var(--color-text-muted)", margin: "0 0 0.75rem" }}>
+        Was the agent&apos;s score accurate? Feedback helps improve future scoring.
       </p>
 
       {submitted && (
-        <div className="alert alert-success">Thank you — feedback recorded.</div>
+        <div className="job-success" style={{ marginBottom: "0.75rem" }}>
+          <span>✓</span> Feedback recorded — thank you!
+        </div>
       )}
 
       <div className="form-group">
-        <label htmlFor="feedback-notes">Comments</label>
         <textarea
-          id="feedback-notes"
           rows={2}
           placeholder="Optional comments on the scoring..."
           value={notes}

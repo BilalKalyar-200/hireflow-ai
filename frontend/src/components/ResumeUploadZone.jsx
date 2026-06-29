@@ -1,5 +1,5 @@
 /**
- * HireFlow AI — Resume Upload Zone.
+ * FILE 6 of 14 — Resume Upload Zone.
  * Drag-and-drop area for uploading candidate resume PDFs.
  */
 
@@ -7,13 +7,8 @@ import { useRef, useState } from "react";
 
 /**
  * ResumeUploadZone — upload PDF resumes for the active job.
-
- * Input props:
- *   jobId: current job id (required to upload)
- *   onUploadComplete(result): callback after successful upload
- *   onUpload(uploadFn): async (files) => upload handler from parent
- *   disabled: disable when no job selected
- * Output: JSX drag-and-drop upload UI
+ * Input: jobId, onUploadComplete, onUpload, disabled
+ * Output: animated drag-and-drop upload UI
  */
 export default function ResumeUploadZone({
   jobId,
@@ -28,10 +23,9 @@ export default function ResumeUploadZone({
   const inputRef = useRef(null);
 
   /**
-   * Add files from input or drop event to local file list.
-
-   * Input: FileList or array of File objects
-   * Output: none (updates files state, PDF only)
+   * Add PDF files to the pending upload list.
+   * Input: FileList
+   * Output: updates files state
    */
   function addFiles(fileList) {
     const pdfs = Array.from(fileList).filter((f) =>
@@ -45,33 +39,18 @@ export default function ResumeUploadZone({
     setFiles((prev) => [...prev, ...pdfs]);
   }
 
-  /**
-   * Handle drag over — highlight drop zone.
-
-   * Input: drag event
-   * Output: none
-   */
+  /** Input: drag event | Output: highlights drop zone */
   function handleDragOver(e) {
     e.preventDefault();
     setDragOver(true);
   }
 
-  /**
-   * Handle drag leave — remove highlight.
-
-   * Input: drag event
-   * Output: none
-   */
+  /** Input: none | Output: removes highlight */
   function handleDragLeave() {
     setDragOver(false);
   }
 
-  /**
-   * Handle file drop onto zone.
-
-   * Input: drop event with dataTransfer.files
-   * Output: none (adds files to list)
-   */
+  /** Input: drop event | Output: adds dropped files */
   function handleDrop(e) {
     e.preventDefault();
     setDragOver(false);
@@ -79,17 +58,16 @@ export default function ResumeUploadZone({
   }
 
   /**
-   * Upload selected files to the backend.
-
-   * Input: click on Upload button
-   * Output: none (calls API via onUpload)
+   * Upload files to backend.
+   * Input: click Upload button
+   * Output: calls onUpload API
    */
   async function handleUpload() {
     if (!jobId || files.length === 0) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await onUpload(files);
+      const result = await onUpload(jobId, files);
       onUploadComplete(result);
       setFiles([]);
     } catch (err) {
@@ -101,15 +79,23 @@ export default function ResumeUploadZone({
 
   return (
     <div className="card">
-      <h2 className="card-title">2. Upload Resumes</h2>
+      <h2 className="card-title">
+        <span className="step-badge">2</span>
+        Upload Resumes
+      </h2>
 
       {!jobId && (
-        <div className="alert alert-info">
-          Create a job first, then upload resume PDFs.
-        </div>
+        <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", margin: "0 0 0.75rem" }}>
+          Create a job first, then drop PDF resumes here.
+        </p>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && (
+        <div className="toast toast-error" style={{ marginBottom: "0.75rem", position: "static" }}>
+          <span className="toast-icon">✕</span>
+          {error}
+        </div>
+      )}
 
       <div
         className={`upload-zone ${dragOver ? "drag-over" : ""}`}
@@ -128,8 +114,9 @@ export default function ResumeUploadZone({
           onChange={(e) => addFiles(e.target.files)}
           disabled={disabled || !jobId}
         />
+        <p style={{ fontSize: "1.5rem", margin: "0 0 0.5rem" }}>📁</p>
         <p><strong>Drop PDF resumes here</strong> or click to browse</p>
-        <p>Multiple files supported · Max 5MB each</p>
+        <p>Multiple files · Max 5 MB each · PDF only</p>
       </div>
 
       {files.length > 0 && (
@@ -147,7 +134,8 @@ export default function ResumeUploadZone({
         disabled={disabled || !jobId || files.length === 0 || loading}
         onClick={handleUpload}
       >
-        {loading ? "Uploading..." : `Upload ${files.length || ""} Resume(s)`}
+        {loading && <span className="btn-spinner" />}
+        {loading ? "Uploading..." : `Upload ${files.length} Resume(s)`}
       </button>
     </div>
   );

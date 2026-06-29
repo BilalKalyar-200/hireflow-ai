@@ -1,5 +1,5 @@
 /**
- * HireFlow AI — REST API Client.
+ * FILE 2 of 14 — HireFlow AI REST API Client.
  * Fetch wrapper for all backend FastAPI endpoints.
  */
 
@@ -9,13 +9,8 @@ export const API_BASE_URL =
 
 /**
  * Perform a JSON fetch request with error handling.
-
- * Input:
- *   path: API path (e.g. "/jobs")
- *   options: optional fetch options (method, body, headers)
- * Output:
- *   parsed JSON response body
- * Throws: Error with message from API or network failure
+ * Input: path string, optional fetch options
+ * Output: parsed JSON response body
  */
 async function request(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
@@ -41,22 +36,12 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-/**
- * Check API health and token usage.
-
- * Input: none
- * Output: health JSON from GET /health
- */
+/** Input: none | Output: health JSON from GET /health */
 export async function getHealth() {
   return request("/health");
 }
 
-/**
- * Create a new job with a job description.
-
- * Input: jdText (string), optional title (string)
- * Output: job object with id, title, jd_text, status
- */
+/** Input: jdText, optional title | Output: job object */
 export async function createJob(jdText, title = null) {
   return request("/jobs", {
     method: "POST",
@@ -64,32 +49,17 @@ export async function createJob(jdText, title = null) {
   });
 }
 
-/**
- * List all jobs.
-
- * Input: none
- * Output: { jobs: [], count: number }
- */
+/** Input: none | Output: { jobs, count } */
 export async function listJobs() {
   return request("/jobs");
 }
 
-/**
- * Get one job by id.
-
- * Input: jobId string
- * Output: job object
- */
+/** Input: jobId | Output: job object */
 export async function getJob(jobId) {
   return request(`/jobs/${jobId}`);
 }
 
-/**
- * Upload resume PDF files for a job.
-
- * Input: jobId string, files FileList or array of File objects
- * Output: { job_id, candidate_ids, uploaded_count, message }
- */
+/** Input: jobId, files array | Output: upload response */
 export async function uploadResumes(jobId, files) {
   const formData = new FormData();
   formData.append("job_id", jobId);
@@ -102,36 +72,17 @@ export async function uploadResumes(jobId, files) {
   });
 }
 
-/**
- * List candidates for a job.
-
- * Input: jobId string
- * Output: { candidates: [], count: number }
- */
+/** Input: jobId | Output: { candidates, count } */
 export async function listCandidates(jobId) {
   return request(`/candidates?job_id=${encodeURIComponent(jobId)}`);
 }
 
-/**
- * Get one candidate by id.
-
- * Input: candidateId string
- * Output: candidate object with score, stage, reasoning
- */
+/** Input: candidateId | Output: candidate object */
 export async function getCandidate(candidateId) {
   return request(`/candidates/${candidateId}`);
 }
 
-/**
- * Approve or reject a flagged candidate (human-in-the-loop).
-
- * Input:
- *   candidateId string
- *   action: "approve" or "reject"
- *   overrideScore: optional number 0-100
- *   notes: optional string
- * Output: { status, stage, message }
- */
+/** Input: candidateId, action, overrideScore, notes | Output: review result */
 export async function reviewCandidate(
   candidateId,
   action,
@@ -147,12 +98,7 @@ export async function reviewCandidate(
   });
 }
 
-/**
- * Start the autonomous hiring pipeline for a job.
-
- * Input: jobId string, forceRestart boolean
- * Output: { status, job_id, message }
- */
+/** Input: jobId, forceRestart | Output: pipeline start response */
 export async function runPipeline(jobId, forceRestart = false) {
   return request(`/pipeline/run/${jobId}`, {
     method: "POST",
@@ -160,24 +106,12 @@ export async function runPipeline(jobId, forceRestart = false) {
   });
 }
 
-/**
- * Get pipeline run status for a job.
-
- * Input: jobId string
- * Output: pipeline status object with progress_pct, plan, errors
- */
+/** Input: jobId | Output: pipeline status object */
 export async function getPipelineStatus(jobId) {
   return request(`/pipeline/status/${jobId}`);
 }
 
-/**
- * Get audit logs for a job.
-
- * Input: jobId string, optional limit number
- * Output: { logs: [], count: number }
- */
+/** Input: jobId, limit | Output: { logs, count } */
 export async function getAuditLogs(jobId, limit = 200) {
-  return request(
-    `/audit/job/${jobId}?limit=${encodeURIComponent(limit)}`
-  );
+  return request(`/audit/job/${jobId}?limit=${encodeURIComponent(limit)}`);
 }

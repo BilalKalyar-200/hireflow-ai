@@ -1,130 +1,221 @@
 /**
- * HireFlow AI — Candidate Detail Panel.
- * Shows score breakdown, Qwen reasoning, and resume highlights.
+ * FILE 8 of 14 — Candidate Detail Drawer.
+ * Slide-in panel with score ring, breakdown, review actions, and feedback.
  */
 
+import { useEffect } from "react";
+import FeedbackForm from "./FeedbackForm";
+import ReviewPanel from "./ReviewPanel";
 import { formatStageLabel, scoreColor } from "../utils/constants";
 
 /**
- * CandidateDetail — right panel with full candidate information.
-
- * Input props:
- *   candidate: candidate object or null
- * Output: JSX detail panel or empty state
+ * SVG circular progress ring for candidate score.
+ * Input: score number, color string, size number
+ * Output: JSX SVG element
  */
-export default function CandidateDetail({ candidate }) {
-  if (!candidate) {
-    return (
-      <div className="card">
-        <h2 className="card-title">Candidate Detail</h2>
-        <div className="empty-state">
-          Select a candidate from the pipeline to view scores and reasoning.
-        </div>
+function ScoreRing({ score, color, size = 88 }) {
+  const radius = (size - 8) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <svg className="score-ring" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="var(--color-border)"
+        strokeWidth="6"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="18"
+        fontWeight="800"
+        fill="var(--color-text)"
+      >
+        {Math.round(score)}
+      </text>
+    </svg>
+  );
+}
+
+/**
+ * Horizontal progress bar for one score component.
+ * Input: label, value (0-100), color
+ * Output: JSX progress row
+ */
+function BreakdownBar({ label, value, color }) {
+  return (
+    <div className="progress-row">
+      <div className="progress-row-label">
+        <span>{label}</span>
+        <span>{value}%</span>
       </div>
-    );
-  }
+      <div className="progress-row-bar">
+        <div
+          className="progress-row-fill"
+          style={{ width: `${Math.min(100, value)}%`, background: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * CandidateDetail — 480px slide-in drawer from the right.
+ * Input: open, candidate, onClose, onReview, onReviewComplete, onSubmitFeedback
+ * Output: drawer JSX or null when closed
+ */
+export default function CandidateDetail({
+  open,
+  candidate,
+  onClose,
+  onReview,
+  onReviewComplete,
+  onSubmitFeedback,
+  onReviewError,
+}) {
+  /** Close drawer on Escape key */
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !candidate) return null;
 
   const breakdown = candidate.score_breakdown;
   const structured = candidate.structured_data;
+  const score = candidate.score ?? 0;
+  const color = scoreColor(candidate.score);
 
   return (
-    <div className="card">
-      <h2 className="card-title">{candidate.name || "Candidate"}</h2>
-
-      <div className="detail-section">
-        <h4>Stage</h4>
-        <p>{formatStageLabel(candidate.stage)}</p>
-      </div>
-
-      {candidate.email && (
-        <div className="detail-section">
-          <h4>Email</h4>
-          <p>{candidate.email}</p>
-        </div>
-      )}
-
-      {candidate.score != null && (
-        <div className="detail-section">
-          <h4>Final Score</h4>
-          <p>
-            <span
-              className="score-badge"
-              style={{
-                background: scoreColor(candidate.score),
-                fontSize: "0.9rem",
-                padding: "0.25rem 0.6rem",
-              }}
-            >
-              {candidate.score}/100
-            </span>
-          </p>
-        </div>
-      )}
-
-      {breakdown && (
-        <div className="detail-section">
-          <h4>Score Breakdown</h4>
-          <div className="score-grid">
-            <div className="score-item">
-              <strong>{breakdown.qwen_qualitative}</strong>
-              Qwen Qualitative
-            </div>
-            <div className="score-item">
-              <strong>{breakdown.semantic_similarity}%</strong>
-              Semantic Match
-            </div>
-            <div className="score-item">
-              <strong>{breakdown.skills_match_pct}%</strong>
-              Skills Match
-            </div>
-            <div className="score-item">
-              <strong>{breakdown.experience_fit}%</strong>
-              Experience Fit
-            </div>
+    <>
+      <div className="drawer-overlay" onClick={onClose} role="presentation" />
+      <aside className="drawer" role="dialog" aria-label="Candidate detail">
+        <div className="drawer-header">
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>
+              {candidate.name || "Candidate"}
+            </h2>
+            <p style={{ margin: "0.25rem 0 0", color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
+              {formatStageLabel(candidate.stage)}
+              {candidate.email && ` · ${candidate.email}`}
+            </p>
           </div>
+          <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
         </div>
-      )}
 
-      {candidate.reasoning && (
-        <div className="detail-section">
-          <h4>Agent Reasoning</h4>
-          <p>{candidate.reasoning}</p>
-        </div>
-      )}
+        <div className="drawer-body">
+          {candidate.flagged_for_review && (
+            <ReviewPanel
+              candidate={candidate}
+              onReview={onReview}
+              onReviewComplete={onReviewComplete}
+              onError={onReviewError}
+            />
+          )}
 
-      {structured?.skills?.length > 0 && (
-        <div className="detail-section">
-          <h4>Skills</h4>
-          <p>{structured.skills.join(", ")}</p>
-        </div>
-      )}
+          {candidate.score != null && (
+            <div className="score-ring-wrap">
+              <ScoreRing score={score} color={color} />
+              <div>
+                <div className="score-ring-label" style={{ color }}>
+                  {score}/100
+                </div>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
+                  Overall match score
+                </p>
+              </div>
+            </div>
+          )}
 
-      {structured?.experience_years != null && (
-        <div className="detail-section">
-          <h4>Experience</h4>
-          <p>{structured.experience_years} years</p>
-        </div>
-      )}
+          {breakdown && (
+            <>
+              <div className="section-title">Score Breakdown</div>
+              <BreakdownBar label="Qwen Qualitative" value={breakdown.qwen_qualitative} color="#2563EB" />
+              <BreakdownBar label="Semantic Similarity" value={breakdown.semantic_similarity} color="#7C3AED" />
+              <BreakdownBar label="Skills Match" value={breakdown.skills_match_pct} color="#16A34A" />
+              <BreakdownBar label="Experience Fit" value={breakdown.experience_fit} color="#D97706" />
+            </>
+          )}
 
-      {candidate.interview_link && (
-        <div className="detail-section">
-          <h4>Interview Link</h4>
-          <p>
-            <a href={candidate.interview_link} target="_blank" rel="noreferrer">
-              Open calendar / Meet link
-            </a>
-          </p>
-        </div>
-      )}
+          {structured?.skills?.length > 0 && (
+            <>
+              <div className="section-title">Skills</div>
+              <div>
+                {structured.skills.map((s) => (
+                  <span key={s} className="pill-badge">{s}</span>
+                ))}
+              </div>
+            </>
+          )}
 
-      {candidate.report && (
-        <div className="detail-section">
-          <h4>Evaluation Report</h4>
-          <pre className="plan-box" style={{ whiteSpace: "pre-wrap" }}>
-            {candidate.report}
-          </pre>
+          {candidate.reasoning && (
+            <>
+              <div className="section-title">Agent Reasoning</div>
+              <blockquote className="quote-block">{candidate.reasoning}</blockquote>
+            </>
+          )}
+
+          {structured?.work_history?.length > 0 && (
+            <>
+              <div className="section-title">Work History</div>
+              <div className="timeline">
+                {structured.work_history.map((job, i) => (
+                  <div key={i} className="timeline-item">
+                    <strong>{job.role || "Role"}</strong>
+                    <div style={{ fontSize: "0.82rem", color: "var(--color-text-muted)" }}>
+                      {job.company} {job.years ? `· ${job.years} yrs` : ""}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {candidate.interview_link && (
+            <>
+              <div className="section-title">Interview</div>
+              <a href={candidate.interview_link} target="_blank" rel="noreferrer">
+                Open calendar / Meet link →
+              </a>
+            </>
+          )}
+
+          {candidate.report && (
+            <>
+              <div className="section-title">Evaluation Report</div>
+              <pre className="quote-block" style={{ whiteSpace: "pre-wrap", fontStyle: "normal" }}>
+                {candidate.report}
+              </pre>
+            </>
+          )}
+
+          <FeedbackForm candidate={candidate} onSubmitFeedback={onSubmitFeedback} />
         </div>
-      )}
-    </div>
+      </aside>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * HireFlow AI — WebSocket Hook.
+ * FILE 3 of 14 — HireFlow AI WebSocket Hook.
  * Connects to /ws/pipeline for real-time pipeline stage updates.
  */
 
@@ -10,12 +10,8 @@ const WS_URL =
 
 /**
  * React hook for pipeline WebSocket connection.
-
- * Input:
- *   onEvent: callback function called with each PipelineEvent JSON object
- *   enabled: whether to connect (default true)
- * Output:
- *   { connected, lastEvent, reconnect }
+ * Input: onEvent callback, enabled boolean
+ * Output: { connected, lastEvent, reconnect }
  */
 export function useWebSocket(onEvent, enabled = true) {
   const [connected, setConnected] = useState(false);
@@ -49,9 +45,7 @@ export function useWebSocket(onEvent, enabled = true) {
         wsRef.current = null;
       };
 
-      ws.onerror = () => {
-        setConnected(false);
-      };
+      ws.onerror = () => setConnected(false);
     } catch {
       setConnected(false);
     }
@@ -67,16 +61,9 @@ export function useWebSocket(onEvent, enabled = true) {
     };
   }, [connect]);
 
-  /**
-   * Manually reconnect the WebSocket.
-
-   * Input: none
-   * Output: none (triggers new connection)
-   */
+  /** Input: none | Output: none — reconnects WebSocket */
   const reconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
+    if (wsRef.current) wsRef.current.close();
     connect();
   }, [connect]);
 
