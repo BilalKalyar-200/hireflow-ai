@@ -70,7 +70,7 @@ export default function JobIntakePanel({
           <input
             id="job-title"
             type="text"
-            placeholder="e.g. Senior Python Developer — Remote, Full-time"
+            placeholder="e.g. Senior Python Developer - Remote, Full-time"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={disabled || loading}
