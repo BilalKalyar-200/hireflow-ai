@@ -80,7 +80,7 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 2.35rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -209,7 +209,7 @@ body {
 }
 
 .card-title {
-  font-size: 0.95rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 1rem;
   color: var(--color-text);
@@ -1057,3 +1057,20 @@ body {
     width: 220px;
   }
 }
+/* Hide scrollbars globally while keeping scroll functionality */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+/* Font size improvements */
+.card { font-size: 0.9rem; }
+label { font-size: 0.88rem; }
+input, textarea { font-size: 0.9rem; }
+.step-badge { font-size: 0.85rem; }
+p { font-size: 0.88rem; line-height: 1.6; }
+
+/* Hide scrollbar */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }

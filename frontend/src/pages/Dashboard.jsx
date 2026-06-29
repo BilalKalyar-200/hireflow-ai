@@ -16,10 +16,14 @@ import {
   getCandidate,
   getPipelineStatus,
   listCandidates,
+  listJobs,
   reviewCandidate,
   runPipeline,
   uploadResumes,
 } from "../services/api";
+
+/** Pipeline statuses that should keep candidate list polling active */
+const POLLING_STATUSES = new Set(["running", "completed", "completed_with_errors"]);
 
 /**
  * ToastContainer — renders stacked toast notifications top-right.
@@ -81,6 +85,21 @@ export default function Dashboard() {
   }
 
   /**
+   * Fetch latest candidates from GET /candidates for the active job.
+   * Input: none
+   * Output: updates candidates state
+   */
+  const refreshCandidates = useCallback(async () => {
+    if (!activeJob?.id) return;
+    try {
+      const candRes = await listCandidates(activeJob.id);
+      setCandidates(candRes.candidates || []);
+    } catch (err) {
+      addToast(err.message, "error");
+    }
+  }, [activeJob?.id, addToast]);
+
+  /**
    * Refresh candidates and audit logs for active job.
    * Input: none
    * Output: updates candidates and auditLogs state
@@ -88,8 +107,7 @@ export default function Dashboard() {
   const refreshJobData = useCallback(async () => {
     if (!activeJob?.id) return;
     try {
-      const candRes = await listCandidates(activeJob.id);
-      setCandidates(candRes.candidates || []);
+      await refreshCandidates();
       setAuditLoading(true);
       const auditRes = await getAuditLogs(activeJob.id);
       setAuditLogs(auditRes.logs || []);
@@ -98,7 +116,7 @@ export default function Dashboard() {
     } finally {
       setAuditLoading(false);
     }
-  }, [activeJob?.id, addToast]);
+  }, [activeJob?.id, addToast, refreshCandidates]);
 
   /**
    * Refresh pipeline status from API.
@@ -106,21 +124,23 @@ export default function Dashboard() {
    * Output: updates pipelineStatus and pipelineRunning
    */
   const refreshPipelineStatus = useCallback(async () => {
-    if (!activeJob?.id) return;
+    if (!activeJob?.id) return null;
     try {
       const status = await getPipelineStatus(activeJob.id);
       setPipelineStatus(status);
       if (status.status === "running") {
         setPipelineRunning(true);
+      } else if (status.status === "idle") {
+        setPipelineRunning(false);
       } else if (
         status.status === "completed" ||
-        status.status === "completed_with_errors" ||
-        status.status === "idle"
+        status.status === "completed_with_errors"
       ) {
         setPipelineRunning(false);
       }
+      return status;
     } catch {
-      /* non-fatal */
+      return null;
     }
   }, [activeJob?.id]);
 
@@ -132,31 +152,78 @@ export default function Dashboard() {
   const handleWsEvent = useCallback(
     (event) => {
       if (!activeJob?.id || event.job_id !== activeJob.id) return;
-      refreshJobData();
+      refreshCandidates();
       refreshPipelineStatus();
       if (event.event_type === "pipeline_complete") {
         setPipelineRunning(false);
+        refreshCandidates();
         addToast("Pipeline completed! Review results in the board.", "success");
       }
     },
-    [activeJob?.id, refreshJobData, refreshPipelineStatus, addToast]
+    [activeJob?.id, refreshCandidates, refreshPipelineStatus, addToast]
   );
 
   const { connected } = useWebSocket(handleWsEvent, Boolean(activeJob?.id));
 
+  /** On first load, restore the most recent job so candidates appear without recreating the job */
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await listJobs();
+        if (cancelled || !res.jobs?.length) return;
+        setActiveJob(res.jobs[0]);
+      } catch {
+        /* no jobs yet — user will create one */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** When active job changes, load candidates, audit logs, and pipeline status immediately */
+  useEffect(() => {
+    if (!activeJob?.id) return;
     refreshJobData();
     refreshPipelineStatus();
   }, [activeJob?.id, refreshJobData, refreshPipelineStatus]);
 
+  /**
+   * Poll GET /candidates every 3s while pipeline is running or completed
+   * so the Kanban board updates even if WebSocket misses events.
+   */
   useEffect(() => {
-    if (!pipelineRunning || !activeJob?.id) return;
-    const interval = setInterval(() => {
-      refreshJobData();
-      refreshPipelineStatus();
+    if (!activeJob?.id) return;
+
+    const status = pipelineStatus?.status;
+    const shouldPoll =
+      pipelineRunning || (status && POLLING_STATUSES.has(status));
+
+    if (!shouldPoll) return;
+
+    refreshCandidates();
+
+    const interval = setInterval(async () => {
+      await refreshCandidates();
+      const latestStatus = await refreshPipelineStatus();
+      if (
+        latestStatus &&
+        (latestStatus.status === "completed" ||
+          latestStatus.status === "completed_with_errors")
+      ) {
+        await refreshCandidates();
+      }
     }, 3000);
+
     return () => clearInterval(interval);
-  }, [pipelineRunning, activeJob?.id, refreshJobData, refreshPipelineStatus]);
+  }, [
+    activeJob?.id,
+    pipelineRunning,
+    pipelineStatus?.status,
+    refreshCandidates,
+    refreshPipelineStatus,
+  ]);
 
   /**
    * Open candidate detail drawer with full API data.
@@ -185,6 +252,7 @@ export default function Dashboard() {
       const result = await runPipeline(activeJob.id);
       addToast(result.message || "Pipeline started!", "success");
       await refreshPipelineStatus();
+      await refreshCandidates();
     } catch (err) {
       addToast(err.message, "error");
       setPipelineRunning(false);
@@ -327,12 +395,14 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <PipelineView
-            candidates={candidates}
-            selectedId={selectedCandidate?.id}
-            onSelectCandidate={handleSelectCandidate}
-            pipelineRunning={pipelineRunning}
-          />
+          {activeTab === "pipeline" && (
+            <PipelineView
+              candidates={candidates}
+              selectedId={selectedCandidate?.id}
+              onSelectCandidate={handleSelectCandidate}
+              pipelineRunning={pipelineRunning}
+            />
+          )}
 
           {activeTab === "audit" && (
             <AuditLogViewer logs={auditLogs} loading={auditLoading} />

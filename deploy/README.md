@@ -1,9 +1,18 @@
 # Deployment
 
-Docker and Alibaba Cloud ECS deployment files will be added in **Step 5**.
+Docker and Alibaba Cloud ECS deployment for HireFlow AI.
 
-Planned files:
+| File | Description |
+|------|-------------|
+| [Dockerfile](./Dockerfile) | Multi-stage build (frontend + backend) |
+| [docker-compose.yml](./docker-compose.yml) | Local and ECS compose stack |
+| [nginx.conf](./nginx.conf) | Frontend nginx config |
+| [alibaba-ecs-setup.md](./alibaba-ecs-setup.md) | **Full ECS deployment guide** |
 
-- `Dockerfile` — multi-stage build (frontend + backend)
-- `docker-compose.yml` — local and ECS compose configuration
-- `alibaba-ecs-setup.md` — step-by-step Alibaba Cloud deployment guide
+Quick start (local):
+
+```bash
+docker compose -f deploy/docker-compose.yml up --build
+```
+
+Dashboard: http://localhost · API: http://localhost:8000/health

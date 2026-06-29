@@ -1,0 +1,26 @@
+# Git
+.git
+**/.git
+
+# Python
+**/__pycache__
+**/*.py[cod]
+.venv
+venv
+
+# Node
+**/node_modules
+**/dist
+
+# Secrets — never in Docker image
+**/.env
+credentials/*.json
+!credentials/.gitkeep
+
+# Local data
+backend/data
+instructions.md
+
+# IDE
+.idea
+.vscode

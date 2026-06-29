@@ -1,0 +1,61 @@
+# HireFlow AI — Docker Compose (local testing + Alibaba Cloud ECS)
+#
+# Usage from repo root:
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# Dashboard: http://localhost
+# API docs:  http://localhost:8000/docs
+# Health:    http://localhost:8000/health
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: backend
+    container_name: hireflow-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    environment:
+      APP_ENV: production
+      LOCAL_STORAGE_PATH: /app/data/uploads
+      GOOGLE_SERVICE_ACCOUNT_FILE: /app/credentials/google-service-account.json
+    volumes:
+      - hireflow-uploads:/app/data/uploads
+      - ../credentials:/app/credentials:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: frontend
+      args:
+        # For ECS: replace with http://YOUR_ECS_PUBLIC_IP:8000 before build
+        VITE_API_BASE_URL: http://localhost:8000
+        VITE_WS_URL: ws://localhost:8000/ws/pipeline
+    container_name: hireflow-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  hireflow-uploads:
+    driver: local
+
+# ── Alibaba Cloud ECS proof-of-deployment markers ──
+# This compose file references:
+#   - Alibaba OSS env vars in backend/.env (OSS_ACCESS_KEY_ID, OSS_BUCKET_NAME)
+#   - ECS-compatible Docker deployment on port 8000 (backend) and 80 (frontend)
+#   - Persistent resume storage via Docker volume (fallback when OSS not configured)
