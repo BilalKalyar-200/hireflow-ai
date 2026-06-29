@@ -483,6 +483,20 @@ async def continue_after_review(
         )
         return {"status": "rejected", "stage": PipelineState.COMPLETED.value}
 
+    if action == "hire":
+        await _set_candidate_stage(
+            candidate_id,
+            PipelineState.COMPLETED.value,
+            {"flagged_for_review": False, "review_reason": None},
+        )
+        await log_action(
+            job_id=job_id,
+            candidate_id=candidate_id,
+            action="hire",
+            tool_used="orchestrator",
+            output_summary="Candidate marked as hired by recruiter",
+        )
+        return {"status": "hired", "stage": PipelineState.COMPLETED.value}
     # Approve — continue shortlist flow
     score = override_score or candidate.get("score") or settings.score_auto_shortlist
     await db.update_one(

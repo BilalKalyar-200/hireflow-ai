@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import FeedbackForm from "./FeedbackForm";
 import ReviewPanel from "./ReviewPanel";
 import { formatStageLabel, scoreColor } from "../utils/constants";
-
+import ReactMarkdown from "react-markdown";
 /**
  * SVG circular progress ring for candidate score.
  * Input: score number, color string, size number
@@ -19,7 +19,12 @@ function ScoreRing({ score, color, size = 88 }) {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <svg className="score-ring" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <svg
+      className="score-ring"
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+    >
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -117,12 +122,23 @@ export default function CandidateDetail({
             <h2 style={{ margin: 0, fontSize: "1.25rem" }}>
               {candidate.name || "Candidate"}
             </h2>
-            <p style={{ margin: "0.25rem 0 0", color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
+            <p
+              style={{
+                margin: "0.25rem 0 0",
+                color: "var(--color-text-muted)",
+                fontSize: "0.85rem",
+              }}
+            >
               {formatStageLabel(candidate.stage)}
               {candidate.email && ` · ${candidate.email}`}
             </p>
           </div>
-          <button type="button" className="drawer-close" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="drawer-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
@@ -144,7 +160,13 @@ export default function CandidateDetail({
                 <div className="score-ring-label" style={{ color }}>
                   {score}/100
                 </div>
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.85rem",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
                   Overall match score
                 </p>
               </div>
@@ -154,10 +176,26 @@ export default function CandidateDetail({
           {breakdown && (
             <>
               <div className="section-title">Score Breakdown</div>
-              <BreakdownBar label="Qwen Qualitative" value={breakdown.qwen_qualitative} color="#2563EB" />
-              <BreakdownBar label="Semantic Similarity" value={breakdown.semantic_similarity} color="#7C3AED" />
-              <BreakdownBar label="Skills Match" value={breakdown.skills_match_pct} color="#16A34A" />
-              <BreakdownBar label="Experience Fit" value={breakdown.experience_fit} color="#D97706" />
+              <BreakdownBar
+                label="Qwen Qualitative"
+                value={breakdown.qwen_qualitative}
+                color="#2563EB"
+              />
+              <BreakdownBar
+                label="Semantic Similarity"
+                value={breakdown.semantic_similarity}
+                color="#7C3AED"
+              />
+              <BreakdownBar
+                label="Skills Match"
+                value={breakdown.skills_match_pct}
+                color="#16A34A"
+              />
+              <BreakdownBar
+                label="Experience Fit"
+                value={breakdown.experience_fit}
+                color="#D97706"
+              />
             </>
           )}
 
@@ -166,7 +204,9 @@ export default function CandidateDetail({
               <div className="section-title">Skills</div>
               <div>
                 {structured.skills.map((s) => (
-                  <span key={s} className="pill-badge">{s}</span>
+                  <span key={s} className="pill-badge">
+                    {s}
+                  </span>
                 ))}
               </div>
             </>
@@ -175,7 +215,9 @@ export default function CandidateDetail({
           {candidate.reasoning && (
             <>
               <div className="section-title">Agent Reasoning</div>
-              <blockquote className="quote-block">{candidate.reasoning}</blockquote>
+              <blockquote className="quote-block">
+                {candidate.reasoning}
+              </blockquote>
             </>
           )}
 
@@ -186,7 +228,12 @@ export default function CandidateDetail({
                 {structured.work_history.map((job, i) => (
                   <div key={i} className="timeline-item">
                     <strong>{job.role || "Role"}</strong>
-                    <div style={{ fontSize: "0.82rem", color: "var(--color-text-muted)" }}>
+                    <div
+                      style={{
+                        fontSize: "0.82rem",
+                        color: "var(--color-text-muted)",
+                      }}
+                    >
                       {job.company} {job.years ? `· ${job.years} yrs` : ""}
                     </div>
                   </div>
@@ -198,22 +245,44 @@ export default function CandidateDetail({
           {candidate.interview_link && (
             <>
               <div className="section-title">Interview</div>
-              <a href={candidate.interview_link} target="_blank" rel="noreferrer">
+
+              <a
+                href={candidate.interview_link}
+                target="_blank"
+                rel="noreferrer"
+              >
                 Open calendar / Meet link →
               </a>
+
+              {candidate.stage === "interview_scheduled" && (
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  style={{ marginTop: "1rem", width: "100%" }}
+                  onClick={async () => {
+                    await onReview(candidate.id, "hire");
+                    onReviewComplete?.();
+                    onClose();
+                  }}
+                >
+                  ✓ Mark as Hired
+                </button>
+              )}
             </>
           )}
-
           {candidate.report && (
             <>
               <div className="section-title">Evaluation Report</div>
-              <pre className="quote-block" style={{ whiteSpace: "pre-wrap", fontStyle: "normal" }}>
-                {candidate.report}
-              </pre>
+              <div className="quote-block">
+                <ReactMarkdown>{candidate.report}</ReactMarkdown>
+              </div>
             </>
           )}
 
-          <FeedbackForm candidate={candidate} onSubmitFeedback={onSubmitFeedback} />
+          <FeedbackForm
+            candidate={candidate}
+            onSubmitFeedback={onSubmitFeedback}
+          />
         </div>
       </aside>
     </>

@@ -23,7 +23,11 @@ import {
 } from "../services/api";
 
 /** Pipeline statuses that should keep candidate list polling active */
-const POLLING_STATUSES = new Set(["running", "completed", "completed_with_errors"]);
+const POLLING_STATUSES = new Set([
+  "running",
+  "completed",
+  "completed_with_errors",
+]);
 
 /**
  * ToastContainer — renders stacked toast notifications top-right.
@@ -34,7 +38,11 @@ function ToastContainer({ toasts, onDismiss }) {
   return (
     <div className="toast-container">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast toast-${t.type}`} onClick={() => onDismiss(t.id)}>
+        <div
+          key={t.id}
+          className={`toast toast-${t.type}`}
+          onClick={() => onDismiss(t.id)}
+        >
           <span className="toast-icon">
             {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "ℹ"}
           </span>
@@ -108,6 +116,14 @@ export default function Dashboard() {
     if (!activeJob?.id) return;
     try {
       await refreshCandidates();
+    } catch (err) {
+      addToast(err.message, "error");
+    }
+  }, [activeJob?.id, addToast, refreshCandidates]);
+
+  const refreshAuditLogs = useCallback(async () => {
+    if (!activeJob?.id) return;
+    try {
       setAuditLoading(true);
       const auditRes = await getAuditLogs(activeJob.id);
       setAuditLogs(auditRes.logs || []);
@@ -116,7 +132,7 @@ export default function Dashboard() {
     } finally {
       setAuditLoading(false);
     }
-  }, [activeJob?.id, addToast, refreshCandidates]);
+  }, [activeJob?.id, addToast]);
 
   /**
    * Refresh pipeline status from API.
@@ -160,7 +176,7 @@ export default function Dashboard() {
         addToast("Pipeline completed! Review results in the board.", "success");
       }
     },
-    [activeJob?.id, refreshCandidates, refreshPipelineStatus, addToast]
+    [activeJob?.id, refreshCandidates, refreshPipelineStatus, addToast],
   );
 
   const { connected } = useWebSocket(handleWsEvent, Boolean(activeJob?.id));
@@ -294,7 +310,7 @@ export default function Dashboard() {
       candidateId,
       action,
       overrideScore,
-      notes
+      notes,
     );
     await refreshJobData();
     const updated = await getCandidate(candidateId);
@@ -319,7 +335,10 @@ export default function Dashboard() {
     <>
       {pipelineRunning && (
         <div className="top-progress">
-          <div className="top-progress-bar" style={{ width: `${progressPct}%` }} />
+          <div
+            className="top-progress-bar"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
       )}
 
@@ -348,7 +367,13 @@ export default function Dashboard() {
                   <span className="step-badge">3</span>
                   Run Agent
                 </h2>
-                <p style={{ fontSize: "0.82rem", color: "var(--color-text-muted)", margin: "0 0 0.75rem" }}>
+                <p
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--color-text-muted)",
+                    margin: "0 0 0.75rem",
+                  }}
+                >
                   Active job: <strong>{activeJob.title}</strong>
                   <br />
                   {candidates.length} candidate(s) ready
@@ -360,14 +385,29 @@ export default function Dashboard() {
                   onClick={handleRunPipeline}
                 >
                   {pipelineRunning && <span className="btn-spinner" />}
-                  {pipelineRunning ? "Agent Running..." : "▶ Run Autonomous Pipeline"}
+                  {pipelineRunning
+                    ? "Agent Running..."
+                    : "▶ Run Autonomous Pipeline"}
                 </button>
                 <div className="ws-status">
                   <span className={`ws-dot ${connected ? "live" : ""}`} />
                   WebSocket {connected ? "Live" : "Disconnected"}
                 </div>
                 {pipelineStatus?.plan && pipelineRunning && (
-                  <div className="plan-box" style={{ marginTop: "0.75rem", fontSize: "0.78rem", whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto", padding: "0.65rem", background: "var(--color-column-bg)", borderRadius: 8, border: "1px solid var(--color-border)" }}>
+                  <div
+                    className="plan-box"
+                    style={{
+                      marginTop: "0.75rem",
+                      fontSize: "0.78rem",
+                      whiteSpace: "pre-wrap",
+                      maxHeight: 120,
+                      overflow: "auto",
+                      padding: "0.65rem",
+                      background: "var(--color-column-bg)",
+                      borderRadius: 8,
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
                     {pipelineStatus.plan.slice(0, 300)}
                   </div>
                 )}
@@ -389,7 +429,10 @@ export default function Dashboard() {
             <button
               type="button"
               className={`tab ${activeTab === "audit" ? "active" : ""}`}
-              onClick={() => setActiveTab("audit")}
+              onClick={() => {
+                setActiveTab("audit");
+                refreshAuditLogs();
+              }}
             >
               📋 Audit Log
             </button>
