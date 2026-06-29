@@ -1,10 +1,11 @@
 /**
- * HireFlow AI — React Entry Point (Step 4).
- * Renders the root App component into the DOM.
+ * HireFlow AI — React Entry Point.
+ * Renders the root App component and loads global styles.
  */
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import "./styles/global.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

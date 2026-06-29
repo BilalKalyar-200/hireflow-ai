@@ -1,12 +1,34 @@
 /**
- * HireFlow AI — Root React Component (Step 4).
- * Full dashboard UI will be implemented in Step 4.
+ * HireFlow AI — Root React Component.
+ * App shell with header and dashboard page.
+ */
+
+import Dashboard from "./pages/Dashboard";
+
+/**
+ * App — top-level layout with branded header.
+
+ * Input: none
+ * Output: full application JSX tree
  */
 export default function App() {
   return (
-    <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>HireFlow AI</h1>
-      <p>Autonomous recruitment pipeline — dashboard coming in Step 4.</p>
+    <div className="app">
+      <header className="app-header">
+        <div>
+          <h1>HireFlow AI</h1>
+          <div className="tagline">
+            Autonomous AI agents that screen, score, and schedule so hiring runs itself.
+          </div>
+        </div>
+        <div className="header-status">
+          <span>Global AI Hackathon · Track 4 Autopilot Agent</span>
+        </div>
+      </header>
+
+      <main className="dashboard">
+        <Dashboard />
+      </main>
     </div>
   );
 }
