@@ -242,32 +242,44 @@ export default function CandidateDetail({
             </>
           )}
 
-          {candidate.interview_link && (
+          {candidate.stage === "interview_scheduled" && (
             <>
               <div className="section-title">Interview</div>
 
-              <a
-                href={candidate.interview_link}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open calendar / Meet link →
-              </a>
-
-              {candidate.stage === "interview_scheduled" && (
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  style={{ marginTop: "1rem", width: "100%" }}
-                  onClick={async () => {
-                    await onReview(candidate.id, "hire");
-                    onReviewComplete?.();
-                    onClose();
+              {candidate.interview_link ? (
+                <a
+                  href={candidate.interview_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: "block", marginBottom: "1rem" }}
+                >
+                  Open calendar / Meet link →
+                </a>
+              ) : (
+                <p
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--color-text-muted)",
+                    marginBottom: "1rem",
                   }}
                 >
-                  ✓ Mark as Hired
-                </button>
+                  Interview scheduled — calendar link unavailable
+                  (email/calendar not configured).
+                </p>
               )}
+
+              <button
+                type="button"
+                className="btn btn-success"
+                style={{ width: "100%" }}
+                onClick={async () => {
+                  await onReview(candidate.id, "hire");
+                  onReviewComplete?.();
+                  onClose();
+                }}
+              >
+                ✓ Mark as Hired
+              </button>
             </>
           )}
           {candidate.report && (
