@@ -90,7 +90,7 @@ class ReviewAction(BaseModel):
     Output: ReviewAction schema for validation
     """
 
-    action: str = Field(..., pattern="^(approve|reject)$")
+    action: str = Field(..., pattern="^(approve|reject|hire)$")
     override_score: Optional[float] = Field(None, ge=0, le=100)
     notes: Optional[str] = None
 

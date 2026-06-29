@@ -174,7 +174,7 @@ async def review_candidate(candidate_id: str, body: ReviewAction) -> dict:
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    if not candidate.get("flagged_for_review"):
+    if not candidate.get("flagged_for_review") and body.action != "hire":
         raise HTTPException(status_code=400, detail="Candidate is not flagged for review")
 
     result = await continue_after_review(
