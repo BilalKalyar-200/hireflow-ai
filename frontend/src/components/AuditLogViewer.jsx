@@ -1,6 +1,5 @@
 /**
- * FILE 11 of 14 — Audit Log Viewer.
- * Timeline with filters, expandable reasoning, and relative timestamps.
+ * FILE 6 of 7 — Audit Log Viewer (mobile-friendly timeline).
  */
 
 import { useMemo, useState } from "react";
@@ -17,10 +16,13 @@ function AuditItem({ log }) {
 
   return (
     <div className="audit-item">
-      <div className="audit-dot" style={{ background: log.status === "success" ? "#2563EB" : "#DC2626" }} />
+      <div
+        className="audit-dot"
+        style={{ background: log.status === "success" ? "#2563EB" : "#DC2626" }}
+      />
       <div className="audit-content">
         <div className="audit-action">{log.action}</div>
-        <div style={{ fontSize: "0.82rem", marginTop: "0.15rem" }}>{log.output_summary}</div>
+        <div className="audit-output">{log.output_summary}</div>
         <div className="audit-meta">
           <span className="tool-badge">{log.tool_used}</span>
           {log.tokens_used > 0 && (
@@ -68,9 +70,7 @@ export default function AuditLogViewer({ logs = [], loading = false }) {
 
   return (
     <div className="audit-panel">
-      <h2 className="card-title" style={{ marginBottom: "0.75rem" }}>
-        📋 Audit Trail
-      </h2>
+      <h2 className="card-title audit-panel-title">📋 Audit Trail</h2>
 
       <div className="audit-filters">
         {AUDIT_FILTERS.map((f) => (
@@ -86,15 +86,15 @@ export default function AuditLogViewer({ logs = [], loading = false }) {
       </div>
 
       {loading && (
-        <div className="empty-state" style={{ padding: "1rem" }}>
-          <span className="btn-spinner" style={{ borderColor: "var(--color-border)", borderTopColor: "var(--color-primary)" }} />
-          {" "}Loading audit logs...
+        <div className="empty-state audit-loading">
+          <span className="btn-spinner audit-spinner" />
+          Loading audit logs...
         </div>
       )}
 
       {!loading && filtered.length === 0 && (
         <div className="empty-state">
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔍</div>
+          <div className="empty-state-icon">🔍</div>
           <p>No audit entries yet. Run the pipeline to see every agent decision logged here.</p>
         </div>
       )}

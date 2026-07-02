@@ -1,6 +1,5 @@
 /**
- * FILE 7 of 14 — Pipeline Kanban View.
- * Horizontal scrolling board with stage columns and candidate cards.
+ * FILE 4 of 7 — Pipeline Kanban View with desktop scroll hint.
  */
 
 import {
@@ -64,18 +63,16 @@ function CandidateCard({ candidate, selected, onClick }) {
         </div>
       )}
       {candidate.flagged_for_review && (
-        <span className="score-badge" style={{ background: "#D97706", marginLeft: 0 }}>
-          ⚠ Review
-        </span>
+        <span className="score-badge review-badge">⚠ Review</span>
       )}
     </div>
   );
 }
 
 /**
- * PipelineView — horizontal Kanban board of all candidates.
- * Input: candidates, selectedId, onSelectCandidate, pipelineRunning, loading
- * Output: JSX kanban with horizontal scroll
+ * PipelineView — Kanban board with horizontal scroll on desktop, stacked on mobile.
+ * Input: candidates, selectedId, onSelectCandidate, pipelineRunning
+ * Output: JSX kanban board
  */
 export default function PipelineView({
   candidates = [],
@@ -106,46 +103,52 @@ export default function PipelineView({
   }
 
   return (
-    <div className="kanban-scroll">
-      <div className="kanban-board">
-        {PIPELINE_COLUMNS.map((column) => {
-          const columnCandidates = candidatesInColumn(column);
-          const isEmpty = columnCandidates.length === 0;
+    <div className="kanban-wrapper">
+      <div className="kanban-scroll-hint" aria-hidden="true">
+        <span>Scroll right to see more columns</span>
+        <span className="kanban-scroll-arrow">→</span>
+      </div>
+      <div className="kanban-scroll">
+        <div className="kanban-board">
+          {PIPELINE_COLUMNS.map((column) => {
+            const columnCandidates = candidatesInColumn(column);
+            const isEmpty = columnCandidates.length === 0;
 
-          return (
-            <div
-              key={column.id}
-              className={`kanban-column ${isEmpty ? "empty-column" : ""}`}
-            >
-              <div className="column-header">
-                <div className="column-header-left">
-                  <span
-                    className={`header-badge ${column.pulse ? "pulse" : ""}`}
-                    style={{ background: column.color }}
-                  >
-                    {column.icon} {column.title}
-                  </span>
+            return (
+              <div
+                key={column.id}
+                className={`kanban-column ${isEmpty ? "empty-column" : ""}`}
+              >
+                <div className="column-header">
+                  <div className="column-header-left">
+                    <span
+                      className={`header-badge ${column.pulse ? "pulse" : ""}`}
+                      style={{ background: column.color }}
+                    >
+                      {column.icon} {column.title}
+                    </span>
+                  </div>
+                  <span className="column-count">{columnCandidates.length}</span>
                 </div>
-                <span className="column-count">{columnCandidates.length}</span>
+                <div className="column-body">
+                  {isEmpty && !pipelineRunning && (
+                    <div className="column-empty">No candidates</div>
+                  )}
+                  {isEmpty && pipelineRunning && <SkeletonCards count={2} />}
+                  {columnCandidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      selected={candidate.id === selectedId}
+                      onClick={() => onSelectCandidate(candidate)}
+                    />
+                  ))}
+                  {!isEmpty && pipelineRunning && <SkeletonCards count={1} />}
+                </div>
               </div>
-              <div className="column-body">
-                {isEmpty && !pipelineRunning && (
-                  <div className="column-empty">No candidates</div>
-                )}
-                {isEmpty && pipelineRunning && <SkeletonCards count={2} />}
-                {columnCandidates.map((candidate) => (
-                  <CandidateCard
-                    key={candidate.id}
-                    candidate={candidate}
-                    selected={candidate.id === selectedId}
-                    onClick={() => onSelectCandidate(candidate)}
-                  />
-                ))}
-                {!isEmpty && pipelineRunning && <SkeletonCards count={1} />}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

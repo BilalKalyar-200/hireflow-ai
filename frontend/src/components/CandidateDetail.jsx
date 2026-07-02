@@ -1,12 +1,39 @@
 /**
- * Slide-in panel with score ring, breakdown, review actions, and feedback.
+ * FILE 5 of 7 — Candidate detail slide-in drawer (responsive).
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import FeedbackForm from "./FeedbackForm";
 import ReviewPanel from "./ReviewPanel";
 import { formatStageLabel, scoreColor } from "../utils/constants";
 import ReactMarkdown from "react-markdown";
+
+/**
+ * Hook — true when viewport width is mobile (≤768px).
+ * Input: none
+ * Output: boolean
+ */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 768
+  );
+
+  useEffect(() => {
+    /**
+     * Update mobile flag on window resize.
+     * Input: resize event
+     * Output: updates isMobile state
+     */
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 /**
  * SVG circular progress ring for candidate score.
  * Input: score number, color string, size number
@@ -16,6 +43,7 @@ function ScoreRing({ score, color, size = 88 }) {
   const radius = (size - 8) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
+  const fontSize = size <= 72 ? 14 : 18;
 
   return (
     <svg
@@ -49,7 +77,7 @@ function ScoreRing({ score, color, size = 88 }) {
         y="50%"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize="18"
+        fontSize={fontSize}
         fontWeight="800"
         fill="var(--color-text)"
       >
@@ -82,8 +110,8 @@ function BreakdownBar({ label, value, color }) {
 }
 
 /**
- * CandidateDetail — 480px slide-in drawer from the right.
- * Input: open, candidate, onClose, onReview, onReviewComplete, onSubmitFeedback
+ * CandidateDetail — slide-in drawer from the right (full width on mobile).
+ * Input: open, candidate, onClose, onReview, callbacks
  * Output: drawer JSX or null when closed
  */
 export default function CandidateDetail({
@@ -95,6 +123,9 @@ export default function CandidateDetail({
   onSubmitFeedback,
   onReviewError,
 }) {
+  const isMobile = useIsMobile();
+  const ringSize = isMobile ? 72 : 88;
+
   /** Close drawer on Escape key */
   useEffect(() => {
     if (!open) return;
@@ -117,17 +148,9 @@ export default function CandidateDetail({
       <div className="drawer-overlay" onClick={onClose} role="presentation" />
       <aside className="drawer" role="dialog" aria-label="Candidate detail">
         <div className="drawer-header">
-          <div>
-            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>
-              {candidate.name || "Candidate"}
-            </h2>
-            <p
-              style={{
-                margin: "0.25rem 0 0",
-                color: "var(--color-text-muted)",
-                fontSize: "0.85rem",
-              }}
-            >
+          <div className="drawer-header-text">
+            <h2>{candidate.name || "Candidate"}</h2>
+            <p>
               {formatStageLabel(candidate.stage)}
               {candidate.email && ` · ${candidate.email}`}
             </p>
@@ -154,20 +177,12 @@ export default function CandidateDetail({
 
           {candidate.score != null && (
             <div className="score-ring-wrap">
-              <ScoreRing score={score} color={color} />
-              <div>
+              <ScoreRing score={score} color={color} size={ringSize} />
+              <div className="score-ring-text">
                 <div className="score-ring-label" style={{ color }}>
                   {score}/100
                 </div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.85rem",
-                    color: "var(--color-text-muted)",
-                  }}
-                >
-                  Overall match score
-                </p>
+                <p>Overall match score</p>
               </div>
             </div>
           )}
@@ -201,11 +216,9 @@ export default function CandidateDetail({
           {structured?.skills?.length > 0 && (
             <>
               <div className="section-title">Skills</div>
-              <div>
+              <div className="pill-wrap">
                 {structured.skills.map((s) => (
-                  <span key={s} className="pill-badge">
-                    {s}
-                  </span>
+                  <span key={s} className="pill-badge">{s}</span>
                 ))}
               </div>
             </>
@@ -214,9 +227,7 @@ export default function CandidateDetail({
           {candidate.reasoning && (
             <>
               <div className="section-title">Agent Reasoning</div>
-              <blockquote className="quote-block">
-                {candidate.reasoning}
-              </blockquote>
+              <blockquote className="quote-block">{candidate.reasoning}</blockquote>
             </>
           )}
 
@@ -227,12 +238,7 @@ export default function CandidateDetail({
                 {structured.work_history.map((job, i) => (
                   <div key={i} className="timeline-item">
                     <strong>{job.role || "Role"}</strong>
-                    <div
-                      style={{
-                        fontSize: "0.82rem",
-                        color: "var(--color-text-muted)",
-                      }}
-                    >
+                    <div className="timeline-item-meta">
                       {job.company} {job.years ? `· ${job.years} yrs` : ""}
                     </div>
                   </div>
@@ -244,33 +250,23 @@ export default function CandidateDetail({
           {candidate.stage === "interview_scheduled" && (
             <>
               <div className="section-title">Interview</div>
-
               {candidate.interview_link ? (
                 <a
                   href={candidate.interview_link}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: "block", marginBottom: "1rem" }}
+                  className="interview-link"
                 >
                   Open calendar / Meet link →
                 </a>
               ) : (
-                <p
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "var(--color-text-muted)",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  Interview scheduled — calendar link unavailable
-                  (email/calendar not configured).
+                <p className="timeline-item-meta interview-unavailable">
+                  Interview scheduled — calendar link unavailable (email/calendar not configured).
                 </p>
               )}
-
               <button
                 type="button"
-                className="btn btn-success"
-                style={{ width: "100%" }}
+                className="btn btn-success btn-block"
                 onClick={async () => {
                   await onReview(candidate.id, "hire");
                   onReviewComplete?.();
@@ -281,10 +277,11 @@ export default function CandidateDetail({
               </button>
             </>
           )}
+
           {candidate.report && (
             <>
               <div className="section-title">Evaluation Report</div>
-              <div className="quote-block">
+              <div className="quote-block report-content">
                 <ReactMarkdown>{candidate.report}</ReactMarkdown>
               </div>
             </>

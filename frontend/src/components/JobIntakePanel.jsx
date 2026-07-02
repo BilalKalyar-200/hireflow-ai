@@ -1,14 +1,13 @@
 /**
- * FILE 5 of 14 — Job Intake Panel.
- * Form for pasting a job description and optional title.
+ * FILE 2 of 7 — Job Intake Panel with success state and create-new flow.
  */
 
 import { useState } from "react";
 
 /**
- * JobIntakePanel — lets recruiter paste JD and create a job posting.
+ * JobIntakePanel — paste JD and create a job posting.
  * Input: onJobCreated, onCreateJob, disabled props
- * Output: JSX form with character count and success checkmark
+ * Output: JSX form with character count and success message
  */
 export default function JobIntakePanel({
   onJobCreated,
@@ -19,17 +18,16 @@ export default function JobIntakePanel({
   const [jdText, setJdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [created, setCreated] = useState(false);
+  const [createdJobTitle, setCreatedJobTitle] = useState(null);
 
   /**
    * Submit job creation form.
    * Input: form submit event
-   * Output: calls onCreateJob and shows success checkmark
+   * Output: calls onCreateJob and shows success with job title
    */
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-    setCreated(false);
 
     if (jdText.trim().length < 10) {
       setError("Job description must be at least 10 characters.");
@@ -39,8 +37,8 @@ export default function JobIntakePanel({
     setLoading(true);
     try {
       const job = await onCreateJob(jdText.trim(), title.trim() || null);
+      setCreatedJobTitle(job.title || "New Position");
       onJobCreated(job);
-      setCreated(true);
       setJdText("");
       setTitle("");
     } catch (err) {
@@ -48,6 +46,18 @@ export default function JobIntakePanel({
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * Reset form to create another job from scratch.
+   * Input: click Create New Job
+   * Output: clears form and success state
+   */
+  function handleCreateNew() {
+    setCreatedJobTitle(null);
+    setTitle("");
+    setJdText("");
+    setError(null);
   }
 
   return (
@@ -67,13 +77,24 @@ export default function JobIntakePanel({
         </div>
       )}
 
+      {createdJobTitle && (
+        <div className="job-success-banner">
+          <span className="job-success-icon">✓</span>
+          <div>
+            <strong>Job created successfully</strong>
+            <div className="job-success-title">{createdJobTitle}</div>
+            <div className="job-success-hint">Upload resumes in step 2, then run the pipeline.</div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="job-title">Job title</label>
           <input
             id="job-title"
             type="text"
-            placeholder="e.g. Senior Python Developer - Remote, Full-time"
+            placeholder="e.g. Senior Python Developer — Remote, Full-time"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={disabled || loading}
@@ -88,7 +109,7 @@ export default function JobIntakePanel({
             value={jdText}
             onChange={(e) => {
               setJdText(e.target.value);
-              setCreated(false);
+              if (createdJobTitle) setCreatedJobTitle(null);
             }}
             disabled={disabled || loading}
             required
@@ -105,10 +126,16 @@ export default function JobIntakePanel({
           {loading ? "Creating..." : "Create Job Posting"}
         </button>
 
-        {created && (
-          <div className="job-success">
-            <span>✓</span> Job created successfully — upload resumes next
-          </div>
+        {createdJobTitle && (
+          <button
+            type="button"
+            className="btn btn-outline btn-block"
+            style={{ marginTop: "0.5rem" }}
+            onClick={handleCreateNew}
+            disabled={disabled || loading}
+          >
+            Create New Job
+          </button>
         )}
       </form>
     </div>

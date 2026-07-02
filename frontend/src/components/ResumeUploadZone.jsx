@@ -1,14 +1,33 @@
 /**
- * FILE 6 of 14 — Resume Upload Zone.
- * Drag-and-drop area for uploading candidate resume PDFs.
+ * FILE 3 of 7 — Resume Upload Zone with per-file removal.
  */
 
 import { useRef, useState } from "react";
 
 /**
- * ResumeUploadZone — upload PDF resumes for the active job.
+ * Format byte size for display next to filename.
+ * Input: bytes number
+ * Output: human-readable string e.g. "245.3 KB"
+ */
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Stable key for a File object in the list.
+ * Input: File object
+ * Output: unique string key
+ */
+function fileKey(file) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+/**
+ * ResumeUploadZone — upload PDF resumes with remove-before-upload support.
  * Input: jobId, onUploadComplete, onUpload, disabled
- * Output: animated drag-and-drop upload UI
+ * Output: drag-and-drop upload UI with file rows and X buttons
  */
 export default function ResumeUploadZone({
   jobId,
@@ -21,6 +40,17 @@ export default function ResumeUploadZone({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
+
+  /**
+   * Reset the hidden file input so the same file can be re-selected.
+   * Input: none
+   * Output: none
+   */
+  function resetFileInput() {
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
 
   /**
    * Add PDF files to the pending upload list.
@@ -36,7 +66,40 @@ export default function ResumeUploadZone({
       return;
     }
     setError(null);
-    setFiles((prev) => [...prev, ...pdfs]);
+    setFiles((prev) => {
+      const existing = new Set(prev.map(fileKey));
+      const merged = [...prev];
+      for (const file of pdfs) {
+        const key = fileKey(file);
+        if (!existing.has(key)) {
+          merged.push(file);
+          existing.add(key);
+        }
+      }
+      return merged;
+    });
+    resetFileInput();
+  }
+
+  /**
+   * Remove one file from the list by index.
+   * Input: index number
+   * Output: updates files state and resets input
+   */
+  function removeFile(index) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    resetFileInput();
+  }
+
+  /**
+   * Remove all selected files.
+   * Input: click Clear All
+   * Output: empty file list and reset input
+   */
+  function clearAll() {
+    setFiles([]);
+    resetFileInput();
+    setError(null);
   }
 
   /** Input: drag event | Output: highlights drop zone */
@@ -58,7 +121,7 @@ export default function ResumeUploadZone({
   }
 
   /**
-   * Upload files to backend.
+   * Upload remaining files to backend.
    * Input: click Upload button
    * Output: calls onUpload API
    */
@@ -70,6 +133,7 @@ export default function ResumeUploadZone({
       const result = await onUpload(jobId, files);
       onUploadComplete(result);
       setFiles([]);
+      resetFileInput();
     } catch (err) {
       setError(err.message || "Upload failed.");
     } finally {
@@ -85,52 +149,101 @@ export default function ResumeUploadZone({
       </h2>
 
       {!jobId && (
-        <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", margin: "0 0 0.75rem" }}>
+        <p className="upload-hint">
           Create a job first, then drop PDF resumes here.
         </p>
       )}
 
       {error && (
-        <div className="toast toast-error" style={{ marginBottom: "0.75rem", position: "static" }}>
+        <div className="toast toast-error upload-error">
           <span className="toast-icon">✕</span>
           {error}
         </div>
       )}
 
-      <div
-        className={`upload-zone ${dragOver ? "drag-over" : ""}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => !disabled && jobId && inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf"
-          multiple
-          onChange={(e) => addFiles(e.target.files)}
-          disabled={disabled || !jobId}
-        />
-        <p style={{ fontSize: "1.5rem", margin: "0 0 0.5rem" }}>📁</p>
-        <p><strong>Drop PDF resumes here</strong> or click to browse</p>
-        <p>Multiple files · Max 5 MB each · PDF only</p>
-      </div>
+      {files.length === 0 && (
+        <div
+          className={`upload-zone ${dragOver ? "drag-over" : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !disabled && jobId && inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !disabled && jobId) inputRef.current?.click();
+          }}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf"
+            multiple
+            onChange={(e) => addFiles(e.target.files)}
+            disabled={disabled || !jobId}
+          />
+          <p className="upload-emoji">📁</p>
+          <p><strong>Drop PDF resumes here</strong> or click to browse</p>
+          <p>Multiple files · Max 5 MB each · PDF only</p>
+        </div>
+      )}
 
       {files.length > 0 && (
-        <ul className="file-list">
-          {files.map((f, i) => (
-            <li key={`${f.name}-${i}`}>📄 {f.name}</li>
-          ))}
-        </ul>
+        <div className="file-list-panel">
+          <div className="file-list-header">
+            <span>{files.length} file(s) selected</span>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm clear-all-btn"
+              onClick={clearAll}
+              disabled={loading || disabled}
+            >
+              Clear All
+            </button>
+          </div>
+          <ul className="file-list file-list-rows">
+            {files.map((file, index) => (
+              <li key={fileKey(file)} className="file-row">
+                <div className="file-row-info">
+                  <span className="file-row-name">📄 {file.name}</span>
+                  <span className="file-row-size">{formatFileSize(file.size)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="file-remove-btn"
+                  onClick={() => removeFile(index)}
+                  disabled={loading || disabled}
+                  aria-label={`Remove ${file.name}`}
+                  title="Remove file"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn btn-outline btn-block add-more-btn"
+            disabled={disabled || !jobId || loading}
+            onClick={() => inputRef.current?.click()}
+          >
+            + Add more PDFs
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf"
+            multiple
+            className="file-input-hidden"
+            onChange={(e) => addFiles(e.target.files)}
+            disabled={disabled || !jobId}
+          />
+        </div>
       )}
 
       <button
         type="button"
-        className="btn btn-primary btn-block"
-        style={{ marginTop: "0.75rem" }}
+        className="btn btn-primary btn-block upload-submit-btn"
         disabled={disabled || !jobId || files.length === 0 || loading}
         onClick={handleUpload}
       >

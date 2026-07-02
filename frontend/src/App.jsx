@@ -1,6 +1,5 @@
 /**
- * FILE 13 of 14 — Root React Component.
- * App shell with gradient header, theme toggle, and dashboard.
+ * FILE 1 of 7 — App shell with responsive header layout.
  */
 
 import { useEffect, useState } from "react";
@@ -20,7 +19,7 @@ function getInitialTheme() {
 }
 
 /**
- * App — header with logo, hackathon badge, dark/light toggle, and dashboard.
+ * App — responsive header + dashboard.
  * Input: none
  * Output: full application JSX tree
  */
@@ -44,14 +43,19 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div>
-          <h1>⚡ HireFlow AI</h1>
+        <div className="header-brand">
+          <div className="header-title-row">
+            <h1>⚡ HireFlow AI</h1>
+          </div>
           <div className="tagline">
             Autonomous AI agents that screen, score, and schedule so hiring runs itself.
           </div>
+          <span className="hackathon-badge badge-mobile">
+            Global AI Hackathon · Track 4 Autopilot Agent
+          </span>
         </div>
         <div className="header-actions">
-          <span className="hackathon-badge">
+          <span className="hackathon-badge badge-desktop">
             Global AI Hackathon · Track 4 Autopilot Agent
           </span>
           <button
