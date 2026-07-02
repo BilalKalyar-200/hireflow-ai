@@ -238,3 +238,6 @@ backend/.env
 # OS files
 .DS_Store
 Thumbs.db
+
+backend/data/uploads/resumes/*
+!backend/data/uploads/resumes/.gitkeep
