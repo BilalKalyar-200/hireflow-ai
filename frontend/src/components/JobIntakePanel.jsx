@@ -58,7 +58,10 @@ export default function JobIntakePanel({
       </h2>
 
       {error && (
-        <div className="toast toast-error" style={{ marginBottom: "0.75rem", position: "static" }}>
+        <div
+          className="toast toast-error"
+          style={{ marginBottom: "0.75rem", position: "static" }}
+        >
           <span className="toast-icon">✕</span>
           {error}
         </div>

@@ -17,22 +17,30 @@ from app.utils.exceptions import ToolError
 
 logger = logging.getLogger(__name__)
 
-SCORE_PROMPT = """Evaluate this candidate against the job requirements.
 
-Job Requirements:
+SCORE_PROMPT = """You are a very strict resume evaluator. Your job is to score this candidate ONLY against the exact job requirements provided below.
+
+CRITICAL RULES:
+- Do NOT add requirements that are not in the job description
+- Do NOT penalize for missing technologies not mentioned in the JD
+- Do NOT assume what a typical role of this type requires
+- ONLY evaluate against what is explicitly stated in the job requirements below
+- If a requirement is not in the JD, it cannot affect the score
+
+Job Requirements (evaluate ONLY against these):
 {jd_json}
 
 Candidate Profile:
 {candidate_json}
 
 Semantic similarity score (0-1): {semantic_score}
-Skills match percentage: {skills_pct}%
+Skills match percentage (required skills only): {skills_pct}%
 Experience fit percentage: {exp_pct}%
 
-Return JSON with:
-- qwen_qualitative: your qualitative score 0-100
-- reasoning: 2-3 sentences explaining the score
-Return ONLY valid JSON.
+Return JSON with exactly these fields:
+- qwen_qualitative: your score 0-100 based ONLY on the above JD
+- reasoning: 2-3 sentences explaining the score referencing only the JD requirements
+Return ONLY valid JSON, no extra text.
 """
 
 

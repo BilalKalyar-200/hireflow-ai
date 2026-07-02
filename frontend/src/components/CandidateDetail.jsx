@@ -1,5 +1,4 @@
 /**
- * FILE 8 of 14 — Candidate Detail Drawer.
  * Slide-in panel with score ring, breakdown, review actions, and feedback.
  */
 
